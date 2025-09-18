@@ -2,7 +2,7 @@ import streamlit as st
 import random
 import copy
 
-st.set_page_config(page_title="Sudoku stylé", layout="centered")
+st.set_page_config(page_title="Sudoku pour JP", layout="centered")
 
 # ----------------- Sudoku utils -----------------
 def find_empty(board):
@@ -105,7 +105,7 @@ if "message" not in st.session_state:
     st.session_state.message = ""
 
 # ----------------- UI -----------------
-st.title("🧩 Sudoku — unique solution + style")
+st.title("🧩 Etape 1 de l'escape game 1 : le sudoku ")
 
 col1, col2, col3 = st.columns([1,2,1])
 with col1:
