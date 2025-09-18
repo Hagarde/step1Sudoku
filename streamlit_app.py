@@ -3,7 +3,7 @@ import streamlit as st
 import random
 import copy
 
-st.set_page_config(page_title="Sudoku stylé", layout="centered")
+st.set_page_config(page_title="Sudoku extrêment dur", layout="centered")
 
 # ----------------- Sudoku generator & solver (backtracking) -----------------
 def find_empty(board):
@@ -81,7 +81,7 @@ if "puzzle" not in st.session_state:
 if "board" not in st.session_state:
     st.session_state.board = None
 if "difficulty" not in st.session_state:
-    st.session_state.difficulty = "Medium"
+    st.session_state.difficulty = "Hard"
 if "message" not in st.session_state:
     st.session_state.message = ""
 
@@ -100,7 +100,7 @@ with col1:
         st.session_state.board = copy.deepcopy(puzzle)
         st.session_state.message = "Nouvelle grille générée."
 with col2:
-    st.selectbox("Difficulté", ["Easy", "Medium", "Hard"], key="difficulty")
+    st.selectbox("Difficulté", ["Hard"], key="difficulty")
 with col3:
     if st.button("Résoudre"):
         if st.session_state.full_solution is None:
