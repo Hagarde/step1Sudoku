@@ -220,19 +220,7 @@ with c2:
         if st.session_state.full_solution is None:
             st.warning("Génère d'abord une grille.")
         else:
-            filled = False
-            for r in range(9):
-                for c in range(9):
-                    if st.session_state.board[r][c] == 0:
-                        st.session_state.board[r][c] = st.session_state.full_solution[r][c]
-                        filled = True
-                        break
-                if filled:
-                    break
-            if filled:
-                st.session_state.message = "Indice ajouté (une case remplie)."
-            else:
-                st.session_state.message = "Aucune case vide."
+            st.session_state.message = "ous n'avez pa le droit à un indice, la triche n'espas autorisé chez les ORY."
 with c3:
     if st.button("Réinitialiser"):
         st.session_state.board = copy.deepcopy(st.session_state.puzzle)
