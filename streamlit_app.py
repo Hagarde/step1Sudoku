@@ -1,11 +1,11 @@
-# sudoku_app.py
+# sudoku_streamlit.py
 import streamlit as st
 import random
 import copy
 
-st.set_page_config(page_title="Sudoku d'anniversaire", layout="centered")
+st.set_page_config(page_title="Sudoku stylé", layout="centered")
 
-# ---------- Sudoku generator & solver (backtracking) ----------
+# ----------------- Sudoku generator & solver (backtracking) -----------------
 def find_empty(board):
     for r in range(9):
         for c in range(9):
@@ -16,16 +16,18 @@ def find_empty(board):
 def valid(board, num, pos):
     r, c = pos
     # row
-    if any(board[r][j] == num for j in range(9) if j != c):
-        return False
+    for j in range(9):
+        if board[r][j] == num and j != c:
+            return False
     # col
-    if any(board[i][c] == num for i in range(9) if i != r):
-        return False
+    for i in range(9):
+        if board[i][c] == num and i != r:
+            return False
     # box
     br, bc = 3*(r//3), 3*(c//3)
     for i in range(br, br+3):
         for j in range(bc, bc+3):
-            if (i, j) != pos and board[i][j] == num:
+            if board[i][j] == num and (i, j) != pos:
                 return False
     return True
 
@@ -34,9 +36,8 @@ def solve(board):
     if not empty:
         return True
     r, c = empty
-    nums = list(range(1,10))
-    for n in nums:
-        if valid(board, n, (r,c)):
+    for n in range(1, 10):
+        if valid(board, n, (r, c)):
             board[r][c] = n
             if solve(board):
                 return True
@@ -45,7 +46,7 @@ def solve(board):
 
 def generate_full_board():
     board = [[0]*9 for _ in range(9)]
-    # fill diagonal boxes first for speed
+    # fill diagonal boxes to speed up
     def fill_box(r, c):
         nums = list(range(1,10))
         random.shuffle(nums)
@@ -55,12 +56,10 @@ def generate_full_board():
                 board[i][j] = nums[idx]; idx += 1
     for k in range(0,9,3):
         fill_box(k, k)
-    # solve to get a complete valid board
     solve(board)
     return board
 
-def make_puzzle(full_board, holes=40):
-    # holes = number of cells to remove (rough difficulty control)
+def make_puzzle(full_board, holes=45):
     puzzle = copy.deepcopy(full_board)
     coords = [(r,c) for r in range(9) for c in range(9)]
     random.shuffle(coords)
@@ -70,11 +69,11 @@ def make_puzzle(full_board, holes=40):
             break
         backup = puzzle[r][c]
         puzzle[r][c] = 0
-        # Optionally check uniqueness here (expensive). We'll skip uniqueness check for simplicity.
+        # skipping uniqueness check for speed (can be added)
         removed += 1
     return puzzle
 
-# ---------- Session state initialization ----------
+# ----------------- Session state -----------------
 if "full_solution" not in st.session_state:
     st.session_state.full_solution = None
 if "puzzle" not in st.session_state:
@@ -83,75 +82,100 @@ if "board" not in st.session_state:
     st.session_state.board = None
 if "difficulty" not in st.session_state:
     st.session_state.difficulty = "Medium"
+if "message" not in st.session_state:
+    st.session_state.message = ""
 
-# ---------- UI ----------
-st.title("🧩 Sudoku en Streamlit")
+# ----------------- Top UI -----------------
+st.title("🧩 Sudoku — génération + UI stylée")
 
 col1, col2, col3 = st.columns([1,2,1])
 with col1:
     if st.button("Nouvelle grille"):
-        # choose number of holes by difficulty
         diff = st.session_state.difficulty
-        if diff == "Easy":
-            holes = 35
-        elif diff == "Medium":
-            holes = 45
-        else:  # Hard
-            holes = 55
+        holes = {"Easy": 36, "Medium": 45, "Hard": 54}[diff]
         full = generate_full_board()
         puzzle = make_puzzle(full, holes=holes)
         st.session_state.full_solution = full
         st.session_state.puzzle = puzzle
         st.session_state.board = copy.deepcopy(puzzle)
-        st.success("Nouvelle grille générée !")
+        st.session_state.message = "Nouvelle grille générée."
 with col2:
     st.selectbox("Difficulté", ["Easy", "Medium", "Hard"], key="difficulty")
 with col3:
     if st.button("Résoudre"):
         if st.session_state.full_solution is None:
-            st.warning("Génère d'abord une grille (Nouvelle grille).")
+            st.warning("Génère d'abord une grille.")
         else:
             st.session_state.board = copy.deepcopy(st.session_state.full_solution)
-            st.success("Grille résolue.")
+            st.session_state.message = "Grille résolue."
 
-st.markdown("**Instructions :** entrez des chiffres 1–9 dans les cases vides. Cliquez sur **Vérifier** pour tester la validité, **Indice** remplira une case correcte.")
+st.markdown("**Instructions :** clique sur une case vide et tape 1–9. Utilise *Vérifier*, *Indice*, *Réinitialiser* selon besoin.")
+if st.session_state.message:
+    st.info(st.session_state.message)
 
-# initialize a default puzzle on first load
+# Initialize default puzzle if none
 if st.session_state.puzzle is None:
-    # generate a default medium puzzle
     full = generate_full_board()
     puzzle = make_puzzle(full, holes=45)
     st.session_state.full_solution = full
     st.session_state.puzzle = puzzle
     st.session_state.board = copy.deepcopy(puzzle)
 
-# Render grid
-st.write("")  # spacing
-grid_cols = []
-for i in range(9):
-    grid_cols.append(st.columns(9))
-
-# We'll display the grid as interactive inputs; pre-filled cells disabled
+# ----------------- CSS for styling each input by aria-label (key) -----------------
+# We'll generate CSS rules targeting input elements created by st.text_input.
+css = "<style>"
+# default style for all cells
+css += """
+input[aria-label^="cell_"]{
+  width:48px;
+  height:48px;
+  text-align:center;
+  font-size:20px;
+  font-weight:600;
+  border-radius:2px;
+  outline:none;
+  box-sizing:border-box;
+}
+input[aria-label^="cell_"]::placeholder { color: #bbb; }
+input[aria-label^="cell_"][disabled] {
+  background: #f2f2f2;
+  color: #111;
+}
+"""
+# add thick separators for 3x3 blocks by setting border sides individually
 for r in range(9):
+    for c in range(9):
+        top = "3px solid #222" if r % 3 == 0 else "1px solid #999"
+        left = "3px solid #222" if c % 3 == 0 else "1px solid #999"
+        bottom = "3px solid #222" if r == 8 else "1px solid #999"
+        right = "3px solid #222" if c == 8 else "1px solid #999"
+        selector = f'input[aria-label="cell_{r}_{c}"]'
+        css += f"""
+{selector} {{
+  border-top: {top};
+  border-left: {left};
+  border-bottom: {bottom};
+  border-right: {right};
+}}
+"""
+css += "</style>"
+st.markdown(css, unsafe_allow_html=True)
+
+# ----------------- Render grid using st.columns and st.text_input -----------------
+# We'll create a 9x9 of inputs bound to keys like "cell_r_c"
+for r in range(9):
+    cols = st.columns(9, gap="small")
     for c in range(9):
         key = f"cell_{r}_{c}"
         pre = st.session_state.puzzle[r][c]
         val = st.session_state.board[r][c]
-        # value for text_input must be string
+        # show prefilled as disabled input
         if pre != 0:
-            # prefilled -> disabled input showing number
-            # using st.text_input disabled=True (available in new streamlit)
-            grid_cols[r][c].text_input(
-                label="",
-                value=str(pre),
-                key=key,
-                disabled=True
-            )
+            # must pass string value
+            cols[c].text_input(label="", value=str(pre), key=key, disabled=True, label_visibility="collapsed")
         else:
-            # editable cell — show current value or empty
             current = "" if val == 0 else str(val)
-            # limit input to 1 char, but we must sanitize later
-            user = grid_cols[r][c].text_input(label="", value=current, key=key, max_chars=1)
+            user = cols[c].text_input(label="", value=current, key=key, max_chars=1, label_visibility="collapsed", placeholder=" ")
             # sanitize and update board
             if user.strip() == "":
                 st.session_state.board[r][c] = 0
@@ -160,49 +184,42 @@ for r in range(9):
                 if ch.isdigit() and 1 <= int(ch) <= 9:
                     st.session_state.board[r][c] = int(ch)
                 else:
-                    # invalid input -> reset to blank (user will see it)
+                    # invalid input -> reset to blank
                     st.session_state.board[r][c] = 0
 
-# Controls under the grid
-cols = st.columns([1,1,1,1])
-with cols[0]:
+# ----------------- Controls -----------------
+c1, c2, c3, c4 = st.columns(4)
+with c1:
     if st.button("Vérifier"):
         if st.session_state.board is None:
-            st.warning("Aucune grille chargée.")
+            st.error("Aucune grille chargée.")
         else:
-            # check validity: no rule violation and maybe completeness
-            bad_positions = []
+            bad = []
             for r in range(9):
                 for c in range(9):
-                    val = st.session_state.board[r][c]
-                    if val != 0:
-                        # Temporarily remove this cell to check duplication
+                    v = st.session_state.board[r][c]
+                    if v != 0:
                         tmp = st.session_state.board[r][c]
                         st.session_state.board[r][c] = 0
                         if not valid(st.session_state.board, tmp, (r,c)):
-                            bad_positions.append((r+1,c+1,tmp))
+                            bad.append((r+1, c+1, tmp))
                         st.session_state.board[r][c] = tmp
-            if bad_positions:
-                msg = "Entrées invalides détectées aux positions (ligne, colonne, valeur):\n"
-                for b in bad_positions:
-                    msg += f"- Ligne {b[0]}, Col {b[1]} → {b[2]}\n"
+            if bad:
+                msg = "Entrées invalides (ligne, col, valeur): " + ", ".join([f"({b[0]},{b[1]}→{b[2]})" for b in bad])
                 st.error(msg)
             else:
-                # if no bad positions, check if complete
                 if all(all(cell != 0 for cell in row) for row in st.session_state.board):
                     if st.session_state.board == st.session_state.full_solution:
-                        st.success("Bravo 🎉 — grille complète et correcte, tu devrais définitivement jeter un coup d'oeil à https://happy-birthday-jp.streamlit.app/")
+                        st.success("Bravo 🎉 — grille complète et correcte tu devrais passer à la prochaine étape sur https://happy-birthday-jp.streamlit.app/")
                     else:
-                        st.warning("Complète mais incorrecte (quelques chiffres ne correspondent pas à la solution).")
+                        st.warning("Grille complète mais incorrecte (quelques chiffres ne correspondent pas).")
                 else:
-                    st.success("Aucune violation des règles détectée jusque-là ✅")
-
-with cols[1]:
+                    st.success("Aucune violation détectée pour l'instant ✅")
+with c2:
     if st.button("Indice"):
         if st.session_state.full_solution is None:
             st.warning("Génère d'abord une grille.")
         else:
-            # find an empty cell and fill with solution
             filled = False
             for r in range(9):
                 for c in range(9):
@@ -213,26 +230,23 @@ with cols[1]:
                 if filled:
                     break
             if filled:
-                st.success("Un indice a été ajouté (une case remplie).")
+                st.session_state.message = "Indice ajouté (une case remplie)."
             else:
-                st.info("Aucune case vide restante.")
-
-with cols[2]:
-    if st.button("Réinitialiser grille"):
-        # reset board to original puzzle (not the solution)
+                st.session_state.message = "Aucune case vide."
+with c3:
+    if st.button("Réinitialiser"):
         st.session_state.board = copy.deepcopy(st.session_state.puzzle)
-        st.info("Grille réinitialisée aux valeurs initiales.")
-
-with cols[3]:
-    if st.button("Exporter (copier)"):
-        # create a simple textual export of current board
+        st.session_state.message = "Grille réinitialisée."
+with c4:
+    if st.button("Copier grille texte"):
         text = ""
         for r in range(9):
             text += "".join(str(x) if x!=0 else "." for x in st.session_state.board[r]) + "\n"
         st.code(text, language="")
+        st.session_state.message = "Grille affichée ci-dessus (copiable)."
 
+# Footer note
 st.markdown("---")
-st.caption("Ce Sudoku utilise un générateur/solveur backtracking simple (pour démonstration). "
-           "Si tu veux : contrôle d'unicité de solution, meilleure UI (cases colorées), ou export PDF — je peux l'ajouter.")
+st.caption("Remarques : le générateur n'effectue pas de vérification d'unicité de solution (plus coûteux). "
+           "Si tu veux : ajout d'un chrono, sauvegarde, validation en live (coloration des erreurs) ou contrôle d'unicité — dis-moi laquelle ajouter et je la fournis.")
 
-# End of file
