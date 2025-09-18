@@ -100,7 +100,7 @@ if "puzzle" not in st.session_state:
 if "board" not in st.session_state:
     st.session_state.board = None
 if "difficulty" not in st.session_state:
-    st.session_state.difficulty = "Medium"
+    st.session_state.difficulty = "Hard"
 if "message" not in st.session_state:
     st.session_state.message = ""
 
@@ -111,7 +111,7 @@ col1, col2, col3 = st.columns([1,2,1])
 with col1:
     if st.button("Nouvelle grille"):
         diff = st.session_state.difficulty
-        holes = {"Easy": 36, "Medium": 45, "Hard": 54}[diff]
+        holes = { "Hard": 54}[diff]
         full = generate_full_board()
         puzzle = make_puzzle(full, holes=holes, ensure_unique=True)
         st.session_state.full_solution = full
@@ -119,7 +119,7 @@ with col1:
         st.session_state.board = copy.deepcopy(puzzle)
         st.session_state.message = "Nouvelle grille générée (solution unique)."
 with col2:
-    st.selectbox("Difficulté", ["Easy", "Medium", "Hard"], key="difficulty")
+    st.selectbox("Difficulté", ["Hard"], key="difficulty")
 with col3:
     if st.button("Résoudre"):
         if st.session_state.full_solution is None:
